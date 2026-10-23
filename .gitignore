@@ -1,0 +1,20 @@
+# .NET / Derleme Çıktıları
+bin/
+obj/
+TestResults/
+
+# Kullanıcıya Özel IDE ve OS Dosyaları
+.vs/
+.vscode/
+*.user
+.DS_Store
+
+# Yapılandırma ve Gizli Dosyalar
+appsettings.Development.json
+appsettings.Local.json
+*.env
+
+# Veritabanı (Eğer local dosya tabanlı bir şey kullanırsan diye)
+*.mdf
+*.ldf
+*.db

@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: belediye-cbs-db
+    environment:
+      POSTGRES_USER: cbs
+      POSTGRES_PASSWORD: cbs_pass
+      POSTGRES_DB: belediye_cbs
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cbs -d belediye_cbs"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

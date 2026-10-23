@@ -1,0 +1,335 @@
+@page
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Talep Haritası</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --bg: #f6f7f9; --panel: #ffffff; --text: #1d2733; --muted: #7b8794;
+            --line: #e6e9ee; --accent: #0b6e4f; --accent-soft: #e8f3ef; --danger: #b42318;
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); background: var(--bg); }
+
+        .layout { display: grid; grid-template-columns: 340px 1fr; height: 100%; }
+        #map { height: 100%; width: 100%; }
+
+        /* Yan panel */
+        aside { position: relative; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+        .top { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px; }
+        .top h1 { margin: 0; font-size: 17px; font-weight: 650; }
+        .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 18px 12px; }
+        .list-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 18px 8px; font-size: 12px; color: var(--muted); }
+        #nearbyBar { display: none; margin: 0 18px 8px; padding: 8px 10px; background: var(--accent-soft); color: var(--accent); border-radius: 8px; font-size: 13px; align-items: center; justify-content: space-between; }
+        #nearbyBar button { width: auto; padding: 0 4px; background: none; border: none; color: var(--accent); font-weight: 600; cursor: pointer; }
+        #list { list-style: none; margin: 0; padding: 0 12px 12px; overflow-y: auto; flex: 1; }
+        #list li { display: flex; gap: 10px; padding: 10px 8px; border-radius: 8px; cursor: pointer; }
+        #list li:hover { background: var(--bg); }
+        .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; }
+        .item-title { font-size: 14px; font-weight: 550; line-height: 1.3; }
+        .item-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .empty { padding: 28px 18px; text-align: center; font-size: 13px; color: var(--muted); }
+
+        /* Form görünümü */
+        #formView { display: none; flex-direction: column; flex: 1; min-height: 0; padding: 18px; gap: 12px; overflow-y: auto; }
+        #formView .back { align-self: flex-start; width: auto; padding: 0; background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; }
+        #formView h2 { margin: 0; font-size: 17px; font-weight: 650; }
+        .loc { padding: 9px 11px; border: 1px dashed var(--line); border-radius: 8px; font-size: 13px; color: var(--muted); }
+        .loc.set { border-style: solid; color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+        .msg { font-size: 13px; min-height: 18px; }
+        .msg.err { color: var(--danger); }
+
+        input, select, textarea, button { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 14px; background: #fff; color: var(--text); }
+        input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+        textarea { resize: vertical; min-height: 84px; }
+        .btn { background: var(--accent); color: #fff; border: none; cursor: pointer; font-weight: 600; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-sm { width: auto; padding: 7px 12px; font-size: 13px; }
+
+        /* Harita üstü açılır pencereler */
+        .pop { min-width: 190px; display: flex; flex-direction: column; gap: 8px; }
+        .pop b { font-size: 14px; }
+        .pop .desc { font-size: 13px; color: var(--text); }
+        .pop .meta { font-size: 12px; color: var(--muted); }
+        .pop .row { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+        .pop select, .pop button { padding: 6px 8px; font-size: 13px; }
+        .pop .ghost { background: #fff; color: var(--accent); border: 1px solid var(--accent); cursor: pointer; font-weight: 600; }
+        .ai { background: #eef4ff; color: #1d4ed8; border-radius: 4px; padding: 1px 5px; font-size: 11px; margin-left: 4px; }
+
+        #toast { position: absolute; left: 18px; right: 18px; bottom: 18px; background: var(--text); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 13px; display: none; }
+
+        @@media (max-width: 800px) {
+            .layout { grid-template-columns: 1fr; grid-template-rows: 55vh 45vh; }
+            aside { order: 2; border-right: none; border-top: 1px solid var(--line); }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside>
+        <!-- Liste görünümü -->
+        <div id="listView" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+            <div class="top">
+                <h1>Talep Haritası</h1>
+                <button id="btnNew" class="btn btn-sm">+ Yeni talep</button>
+            </div>
+            <div class="filters">
+                <select id="fCat"></select>
+                <select id="fStatus"></select>
+            </div>
+            <div id="nearbyBar"><span id="nearbyText"></span><button id="btnClear">Temizle</button></div>
+            <div class="list-head"><span>Talepler</span><span id="count"></span></div>
+            <ul id="list"></ul>
+        </div>
+
+        <!-- Yeni talep görünümü -->
+        <div id="formView">
+            <button class="back" id="btnBack">&larr; Geri</button>
+            <h2>Yeni talep</h2>
+            <div id="loc" class="loc">Haritaya tıklayarak konum seçin</div>
+            <input id="title" maxlength="200" placeholder="Başlık" />
+            <textarea id="desc" placeholder="Açıklama (isteğe bağlı)"></textarea>
+            <select id="cat"></select>
+            <button id="btnCreate" class="btn">Kaydet</button>
+            <div id="createMsg" class="msg"></div>
+        </div>
+
+        <div id="toast"></div>
+    </aside>
+
+    <div id="map"></div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    var CATEGORIES = ['Yol', 'Aydinlatma', 'Su', 'Temizlik', 'Park', 'Diger'];
+    var STATUSES = ['Acik', 'Inceleniyor', 'Cozuldu'];
+    var LABELS = { Aydinlatma: 'Aydınlatma', Diger: 'Diğer', Acik: 'Açık', Inceleniyor: 'İnceleniyor', Cozuldu: 'Çözüldü' };
+    var COLORS = { Yol: '#d9480f', Aydinlatma: '#f59f00', Su: '#1c7ed6', Temizlik: '#2f9e44', Park: '#7048e8', Diger: '#7b8794' };
+
+    function label(k) { return LABELS[k] || k; }
+    function esc(s) { return $('<div>').text(s == null ? '' : s).html(); }
+    function options(values, first) {
+        var html = first ? '<option value="">' + first + '</option>' : '';
+        return html + values.map(function (v) { return '<option value="' + v + '">' + label(v) + '</option>'; }).join('');
+    }
+
+    // Seçim kutularını doldur
+    $('#fCat').html(options(CATEGORIES, 'Tüm kategoriler'));
+    $('#fStatus').html(options(STATUSES, 'Tüm durumlar'));
+    $('#cat').html(options(CATEGORIES, 'Kategori: otomatik belirle'));
+
+    var map = L.map('map').setView([40.205, 29.065], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    var markerLayer = L.layerGroup().addTo(map);
+    var hoodLayer = null;
+    var pickMarker = null;
+    var searchCircle = null;
+    var picked = null;
+    var mode = 'list';
+    var markersById = {};
+
+    /* ---------- Görünüm geçişi ---------- */
+    function showView(name) {
+        mode = name;
+        $('#listView').css('display', name === 'list' ? 'flex' : 'none');
+        $('#formView').css('display', name === 'form' ? 'flex' : 'none');
+        if (name === 'form') { map.closePopup(); updateLoc(); $('#title').trigger('focus'); }
+    }
+
+    function toast(text) {
+        var $t = $('#toast').text(text).stop(true, true).fadeIn(150);
+        setTimeout(function () { $t.fadeOut(300); }, 3500);
+    }
+
+    /* ---------- Liste ve işaretçiler ---------- */
+    function render(fc) {
+        markerLayer.clearLayers();
+        markersById = {};
+        var $list = $('#list').empty();
+        $('#count').text(fc.features.length);
+
+        if (!fc.features.length) {
+            $list.append('<li class="empty" style="display:block;cursor:default;">Talep bulunamadı</li>');
+            return;
+        }
+
+        fc.features.forEach(function (f) {
+            var p = f.properties;
+            var ll = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+            var color = COLORS[p.category] || COLORS.Diger;
+
+            var m = L.circleMarker(ll, {
+                radius: 9, color: '#fff', weight: 2, fillColor: color,
+                fillOpacity: p.status === 'Cozuldu' ? 0.35 : 0.95,
+                bubblingMouseEvents: false
+            }).addTo(markerLayer);
+            m.bindPopup(function () { return requestPopup(p); });
+            markersById[p.id] = m;
+
+            $('<li>').attr('data-id', p.id).html(
+                '<i class="dot" style="background:' + color + '"></i>' +
+                '<div><div class="item-title">' + esc(p.title) + (p.aiSuggested ? '<span class="ai">AI</span>' : '') + '</div>' +
+                '<div class="item-meta">' + esc(label(p.category)) + ' · ' + esc(label(p.status)) +
+                (p.neighborhood ? ' · ' + esc(p.neighborhood) : '') + '</div></div>'
+            ).appendTo($list);
+        });
+    }
+
+    function requestPopup(p) {
+        var opts = STATUSES.map(function (s) {
+            return '<option value="' + s + '"' + (s === p.status ? ' selected' : '') + '>' + label(s) + '</option>';
+        }).join('');
+        return '<div class="pop"><b>' + esc(p.title) + '</b>' +
+            (p.description ? '<div class="desc">' + esc(p.description) + '</div>' : '') +
+            '<div class="meta">' + esc(label(p.category)) + (p.neighborhood ? ' · ' + esc(p.neighborhood) : '') + '</div>' +
+            '<select class="statusSel" data-id="' + p.id + '">' + opts + '</select></div>';
+    }
+
+    function filters() {
+        var p = {};
+        if ($('#fCat').val()) p.category = $('#fCat').val();
+        if ($('#fStatus').val()) p.status = $('#fStatus').val();
+        return p;
+    }
+
+    function clearNearby() {
+        if (searchCircle) { map.removeLayer(searchCircle); searchCircle = null; }
+        $('#nearbyBar').hide();
+    }
+
+    function loadRequests() {
+        clearNearby();
+        $.getJSON('/api/requests', filters()).done(render);
+    }
+
+    function loadHoods() {
+        $.getJSON('/api/neighborhoods').done(function (fc) {
+            if (hoodLayer) map.removeLayer(hoodLayer);
+            var max = Math.max.apply(null, fc.features.map(function (f) { return f.properties.open; }).concat([1]));
+            hoodLayer = L.geoJSON(fc, {
+                style: function (f) {
+                    return { color: '#0b6e4f', weight: 1.5, fillColor: '#0b6e4f', fillOpacity: 0.06 + (f.properties.open / max) * 0.3 };
+                },
+                onEachFeature: function (f, layer) {
+                    layer.bindTooltip(esc(f.properties.name) + ': ' + f.properties.open + ' açık talep');
+                }
+            }).addTo(map).bringToBack();
+        });
+    }
+
+    /* ---------- Konum seçimi ---------- */
+    function pickPopupHtml() {
+        return '<div class="pop"><b>Seçilen konum</b>' +
+            '<button id="popAdd" class="btn">Talep ekle</button>' +
+            '<div class="row"><select id="popRadius">' +
+            '<option value="500">500 m</option><option value="1000" selected>1 km</option><option value="2000">2 km</option>' +
+            '</select><button id="popNearby" class="ghost">Yakındakiler</button></div></div>';
+    }
+
+    function updateLoc() {
+        var $l = $('#loc');
+        if (picked) $l.addClass('set').text(picked.lat.toFixed(5) + ', ' + picked.lng.toFixed(5));
+        else $l.removeClass('set').text('Haritaya tıklayarak konum seçin');
+    }
+
+    map.on('click', function (e) {
+        picked = e.latlng;
+        if (!pickMarker) pickMarker = L.marker(picked).addTo(map).bindPopup(pickPopupHtml());
+        else pickMarker.setLatLng(picked);
+
+        if (mode === 'form') updateLoc();
+        else pickMarker.openPopup();
+    });
+
+    function resetPick() {
+        picked = null;
+        if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+    }
+
+    /* ---------- Etkileşimler ---------- */
+    $('#btnNew').on('click', function () { showView('form'); });
+    $(document).on('click', '#popAdd', function () { showView('form'); });
+
+    $('#btnBack').on('click', function () { $('#createMsg').text(''); showView('list'); });
+
+    $('#btnCreate').on('click', function () {
+        var $msg = $('#createMsg').removeClass('err').text('');
+        if (!picked) { $msg.addClass('err').text('Önce haritadan konum seçin.'); return; }
+        if (!$('#title').val().trim()) { $msg.addClass('err').text('Başlık gerekli.'); return; }
+
+        $('#btnCreate').prop('disabled', true);
+        $.ajax({
+            url: '/api/requests', method: 'POST', contentType: 'application/json',
+            data: JSON.stringify({
+                title: $('#title').val(),
+                description: $('#desc').val(),
+                lat: picked.lat,
+                lon: picked.lng,
+                category: $('#cat').val() || null
+            })
+        }).done(function (f) {
+            var p = f.properties;
+            toast('Kaydedildi: ' + label(p.category) + (p.aiSuggested ? ' (AI)' : '') + (p.neighborhood ? ' · ' + p.neighborhood : ''));
+            $('#title, #desc').val('');
+            $('#cat').val('');
+            resetPick();
+            showView('list');
+            loadRequests();
+            loadHoods();
+        }).fail(function (xhr) {
+            $msg.addClass('err').text((xhr.responseJSON && xhr.responseJSON.error) || 'Kayıt başarısız.');
+        }).always(function () {
+            $('#btnCreate').prop('disabled', false);
+        });
+    });
+
+    $(document).on('change', '.statusSel', function () {
+        $.ajax({
+            url: '/api/requests/' + $(this).data('id') + '/status', method: 'PATCH',
+            contentType: 'application/json', data: JSON.stringify({ status: $(this).val() })
+        }).done(function () { map.closePopup(); loadRequests(); loadHoods(); });
+    });
+
+    $(document).on('click', '#popNearby', function () {
+        if (!picked) return;
+        var radius = parseInt($('#popRadius').val(), 10);
+        $.getJSON('/api/requests/nearby', { lat: picked.lat, lon: picked.lng, radius: radius }).done(function (fc) {
+            clearNearby();
+            searchCircle = L.circle(picked, { radius: radius, color: '#b42318', weight: 1.5, fillOpacity: 0.05 }).addTo(map);
+            $('#nearbyText').text((radius >= 1000 ? radius / 1000 + ' km' : radius + ' m') + ' çevresi');
+            $('#nearbyBar').css('display', 'flex');
+            map.closePopup();
+            render(fc);
+        });
+    });
+
+    $('#btnClear').on('click', function () { resetPick(); loadRequests(); });
+
+    $('#list').on('click', 'li[data-id]', function () {
+        var m = markersById[$(this).data('id')];
+        if (!m) return;
+        map.setView(m.getLatLng(), Math.max(map.getZoom(), 15));
+        m.openPopup();
+    });
+
+    $('#fCat, #fStatus').on('change', loadRequests);
+
+    loadRequests();
+    loadHoods();
+})();
+</script>
+</body>
+</html>
