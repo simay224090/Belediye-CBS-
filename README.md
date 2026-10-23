@@ -41,24 +41,22 @@ export ANTHROPIC_API_KEY=...     # yoksa kural tabanlı sınıflandırıcı devr
 | POST | `/api/requests` | Yeni talep; mahalle otomatik bulunur, kategori boşsa AI belirler |
 | PATCH | `/api/requests/{id}/status` | Durum güncelle |
 | GET | `/api/neighborhoods` | Mahalle poligonları + açık/toplam talep sayısı |
+## ⚙️ Teknik Detaylar ve Mimari
 
-## Mülakatta anlatılabilecekler
+- **Mekansal Veri Modeli:** Coğrafi veriler `geometry(Point,4326)` ve `geometry(Polygon,4326)` tiplerinde saklanmış, performanslı mekansal aramalar için GIST indeksleri tanımlanmıştır. Veritabanı ile ORM arasındaki mekansal iletişim NetTopologySuite (EF Core) üzerinden sağlanmıştır.
+- **Mekansal Sorgular:** Sistemde point-in-polygon (`Boundary.Contains`) ile noktanın bulunduğu poligon tespiti, Bounding Box (`Within`) ile harita görünümüne göre veri filtreleme ve mahalle bazlı mekansal toplulaştırma (aggregation) işlemleri aktif olarak kullanılmaktadır.
+- **Hassas Mesafe Ölçümü:** `geometry` tipinde (SRID 4326) mesafeler derece cinsinden hesaplandığı için, metre bazlı kesin sonuçlar elde etmek amacıyla `ST_DWithin` sorgularında veri `geography` tipine cast edilerek kullanılmıştır.
+- **REST API ve GeoJSON:** Uç noktalar endüstri standardı GeoJSON formatında (FeatureCollection) yanıt verir. Bu sayede Leaflet arayüzünün yanı sıra QGIS veya kurum içi farklı CBS yazılımlarıyla doğrudan entegre çalışabilir.
+- **Yapay Zeka ve Hata Toleransı:** Serbest metin formatındaki vatandaş talepleri Claude API ile analiz edilip ilgili kategoriye atanır. API anahtarının eksik olduğu veya servise ulaşılamayan durumlarda sistem hata fırlatmaz; kural tabanlı (rule-based) yedek bir sınıflandırıcı devreye girer (graceful degradation). AI tahminleri veritabanında `AiSuggested` bayrağı ile işaretlenir.
+- **Güvenlik:** Olası XSS açıklarına karşı arayüz katmanında kullanıcı girdileri HTML-escape işleminden geçirilir. Girdi doğrulamaları API seviyesinde ele alınmış olup, veri erişim katmanında SQL Injection riskini önlemek için parametreli sorgular (`FromSqlInterpolated`) kullanılmıştır.
 
-- **Mekansal veri modeli:** `geometry(Point,4326)` ve `geometry(Polygon,4326)` kolonları, GIST indeksler,
-  NetTopologySuite ile EF Core entegrasyonu.
-- **Mekansal sorgular:** point-in-polygon (`Boundary.Contains`), bbox filtresi (`Within`),
-  metre bazlı yakınlık (`ST_DWithin` ile `geography` cast), mahalle bazlı toplulaştırma.
-- **Neden `geography`?** `geometry` 4326'da mesafeler derece cinsindendir; metre için `geography` kullanıldı.
-- **REST/GeoJSON:** Standart GeoJSON çıktısı sayesinde Leaflet, QGIS veya başka bir kurum sistemiyle kolay entegrasyon.
-- **Yapay zeka:** Serbest metinli talebi kategoriye ayırma; API anahtarı yoksa ya da çağrı hata verirse
-  kural tabanlı yedek (graceful degradation). Hangi kaydın AI önerisi olduğu `AiSuggested` ile saklanır.
-- **Güvenlik:** Arayüzde kullanıcı girdisi HTML-escape edilir, girdi doğrulaması API tarafında yapılır,
-  SQL sorgusu parametreli (`FromSqlInterpolated`).
+## 🚀 Gelecek Geliştirmeler (Roadmap)
 
-## Geliştirme fikirleri (konuşmayı uzatmak için)
-
-- `EnsureCreated` yerine EF Core migration'ları
-- Mahalle sınırlarını gerçek idari sınır verisiyle (GeoJSON/Shapefile) yüklemek
-- Fotoğraf yükleme, kimlik doğrulama ve rol bazlı yetki (vatandaş / personel)
-- Vector tile (MVT) ile yüksek hacimli veri, GeoServer/WMS-WFS entegrasyonu
-- xUnit ile API ve mekansal sorgu testleri, Docker ile uygulamanın da containerize edilmesi
+- `EnsureCreated` yapısından tam kapsamlı EF Core Migration yönetimine geçilmesi.
+- Uygulamadaki demo sınırların gerçek idari sınır verileriyle (GeoJSON/Shapefile) değiştirilmesi.
+- Talep bildirimlerine fotoğraf yükleme (attachment) desteğinin eklenmesi.
+- Kimlik doğrulama (Authentication) altyapısı kurularak vatandaş ve personel (yönetici) yetki sınırlarının belirlenmesi.
+- Yüksek hacimli mekansal verilerin performanslı renderlanabilmesi için Vector Tile (MVT) altyapısının kurulması ve GeoServer (WMS/WFS) entegrasyonu.
+- xUnit ile API ve mekansal sorgu testlerinin (Unit & Integration Tests) yazılması.
+- Uygulamanın .NET servisinin de tamamen Docker container ortamına taşınması.
+- 
