@@ -50,6 +50,25 @@ export ANTHROPIC_API_KEY=...     # yoksa kural tabanlı sınıflandırıcı devr
 - **Yapay Zeka ve Hata Toleransı:** Serbest metin formatındaki vatandaş talepleri Claude API ile analiz edilip ilgili kategoriye atanır. API anahtarının eksik olduğu veya servise ulaşılamayan durumlarda sistem hata fırlatmaz; kural tabanlı (rule-based) yedek bir sınıflandırıcı devreye girer (graceful degradation). AI tahminleri veritabanında `AiSuggested` bayrağı ile işaretlenir.
 - **Güvenlik:** Olası XSS açıklarına karşı arayüz katmanında kullanıcı girdileri HTML-escape işleminden geçirilir. Girdi doğrulamaları API seviyesinde ele alınmış olup, veri erişim katmanında SQL Injection riskini önlemek için parametreli sorgular (`FromSqlInterpolated`) kullanılmıştır.
 
+
+## 📸 Ekran Görüntüleri
+
+**1. Genel Harita Görünümü**  
+Mahalle sınırları ve taleplerin genel dağılımı.  
+<img src="assets/GenelHarita.png" width="800">
+
+**2. Yakın Çekim Harita İncelemesi**  
+Belirli bir bölgedeki taleplerin metre bazlı yakınlık ve yoğunluk analizi.  
+<img src="assets/YakınÇekim.png" width="800">
+
+**3. Yapay Zeka Destekli Talep Ekranı**  
+Vatandaşın konum seçerek serbest metinle talep oluşturduğu arayüz.  
+<img src="assets/Talep%20Ekranı.png" width="800">
+
+**4. Talep Detay Görünümü**  
+Claude API tarafından kategorize edilmiş talebin detayları ve durum yönetimi.  
+<img src="assets/DetayGörünüm.png" width="800">
+
 ## 🚀 Gelecek Geliştirmeler (Roadmap)
 
 - `EnsureCreated` yapısından tam kapsamlı EF Core Migration yönetimine geçilmesi.
