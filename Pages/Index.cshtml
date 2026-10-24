@@ -61,9 +61,9 @@
         .pop .row { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
         .pop select, .pop button { padding: 6px 8px; font-size: 13px; }
         .pop .ghost { background: #fff; color: var(--accent); border: 1px solid var(--accent); cursor: pointer; font-weight: 600; }
-        .ai { background: #eef4ff; color: #1d4ed8; border-radius: 4px; padding: 1px 5px; font-size: 11px; margin-left: 4px; }
+        .ai { background: #eef4ff; color: #1d4ed8; border-radius: 4px; padding: 1px 5px; font-size: 11px; margin-left: 4px; font-weight: 600; }
 
-        #toast { position: absolute; left: 18px; right: 18px; bottom: 18px; background: var(--text); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 13px; display: none; }
+        #toast { position: absolute; left: 18px; right: 18px; bottom: 18px; background: var(--text); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 13px; display: none; z-index: 1000; }
 
         @@media (max-width: 800px) {
             .layout { grid-template-columns: 1fr; grid-template-rows: 55vh 45vh; }
@@ -126,7 +126,7 @@
     // Seçim kutularını doldur
     $('#fCat').html(options(CATEGORIES, 'Tüm kategoriler'));
     $('#fStatus').html(options(STATUSES, 'Tüm durumlar'));
-    $('#cat').html(options(CATEGORIES, 'Kategori: otomatik belirle'));
+    $('#cat').html(options(CATEGORIES, 'Kategori: Otomatik belirle (Yapay Zeka)'));
 
     var map = L.map('map').setView([40.205, 29.065], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -194,7 +194,8 @@
         }).join('');
         return '<div class="pop"><b>' + esc(p.title) + '</b>' +
             (p.description ? '<div class="desc">' + esc(p.description) + '</div>' : '') +
-            '<div class="meta">' + esc(label(p.category)) + (p.neighborhood ? ' · ' + esc(p.neighborhood) : '') + '</div>' +
+            '<div class="meta">' + esc(label(p.category)) + (p.aiSuggested ? ' <span class="ai">🤖 Yapay Zeka Atadı</span>' : '') + 
+            (p.neighborhood ? ' · ' + esc(p.neighborhood) : '') + '</div>' +
             '<select class="statusSel" data-id="' + p.id + '">' + opts + '</select></div>';
     }
 
@@ -282,7 +283,7 @@
             })
         }).done(function (f) {
             var p = f.properties;
-            toast('Kaydedildi: ' + label(p.category) + (p.aiSuggested ? ' (AI)' : '') + (p.neighborhood ? ' · ' + p.neighborhood : ''));
+            toast('Kaydedildi: ' + label(p.category) + (p.aiSuggested ? ' (AI Sınıflandırdı)' : '') + (p.neighborhood ? ' · ' + p.neighborhood : ''));
             $('#title, #desc').val('');
             $('#cat').val('');
             resetPick();

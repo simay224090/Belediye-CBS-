@@ -7,12 +7,17 @@ var builder = WebApplication.CreateBuilder(args);
 // --- Servisler ---
 builder.Services.AddRazorPages();
 
+
 builder.Services.AddDbContext<AppDb>(options => options.UseNpgsql(
     builder.Configuration.GetConnectionString("Default"),
     npgsql => npgsql.UseNetTopologySuite()));
 
 builder.Services.AddHttpClient<AiClassifier>(client =>
-    client.Timeout = TimeSpan.FromSeconds(8));
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestVersion = System.Net.HttpVersion.Version11;
+    client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+});
 
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));

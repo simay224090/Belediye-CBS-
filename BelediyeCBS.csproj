@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>BelediyeCBS</RootNamespace>
+    <UserSecretsId>f8d36dd3-7883-4879-8b4d-1b952ca175fe</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
