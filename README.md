@@ -73,7 +73,7 @@ Vatandaşın konum seçerek serbest metinle talep oluşturduğu arayüz.
 
 **4. Talep Detay Görünümü**  
 Yapay zeka (Groq / gpt-oss-20b) tarafından kategorize edilmiş talebin detayları ve durum yönetimi.  
-<img src="assets/DetayGörünüm.png" width="800">
+<img src="assets/Aı.png" width="800">
 
 ## 🚀 Gelecek Geliştirmeler (Roadmap)
 
