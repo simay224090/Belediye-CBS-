@@ -4,7 +4,7 @@ Vatandaşların harita üzerinden altyapı/hizmet taleplerini (yol, aydınlatma,
 belediye ekibinin ise bu talepleri mekansal olarak sorgulayıp yönettiği küçük bir CBS web uygulaması.
 
 **Teknolojiler:** ASP.NET Core (.NET 10) · Razor Pages · jQuery Ajax · HTML/CSS/JS · EF Core ·
-PostgreSQL + PostGIS · NetTopologySuite · Leaflet · REST API (GeoJSON) · Claude API (yapay zeka)
+PostgreSQL + PostGIS · NetTopologySuite · Leaflet · REST API (GeoJSON) · Groq API · gpt-oss-20b (yapay zeka)
 
 ## Çalıştırma
 
@@ -18,7 +18,13 @@ dotnet run                       # http://localhost:5080
 Yapay zeka ile otomatik kategori için (isteğe bağlı):
 
 ```bash
-export ANTHROPIC_API_KEY=...     # yoksa kural tabanlı sınıflandırıcı devreye girer
+export GROQ_API_KEY=...          # yoksa kural tabanlı sınıflandırıcı devreye girer
+```
+
+Geliştirme ortamında anahtar User Secrets ile de tanımlanabilir:
+
+```bash
+dotnet user-secrets set "Groq:ApiKey" "..."
 ```
 
 ## Proje yapısı
@@ -29,7 +35,7 @@ export ANTHROPIC_API_KEY=...     # yoksa kural tabanlı sınıflandırıcı devr
 | `Api.cs` | REST API uç noktaları ve istek/yanıt modelleri (DTO) |
 | `Data.cs` | Entity'ler, `DbContext`, demo veri (seed) ve veritabanı başlatma |
 | `Geo.cs` | Geometri fabrikası (SRID 4326) ve GeoJSON çıktı yardımcıları |
-| `AiClassifier.cs` | Claude API ile kategori tahmini, yedek olarak kural tabanlı sınıflandırma |
+| `AiClassifier.cs` | Groq API (`openai/gpt-oss-20b`) ile kategori tahmini, yedek olarak kural tabanlı sınıflandırma |
 | `Pages/Index.cshtml` | Harita arayüzü (Razor Page, Leaflet, jQuery Ajax) |
 
 ## REST API
@@ -41,15 +47,15 @@ export ANTHROPIC_API_KEY=...     # yoksa kural tabanlı sınıflandırıcı devr
 | POST | `/api/requests` | Yeni talep; mahalle otomatik bulunur, kategori boşsa AI belirler |
 | PATCH | `/api/requests/{id}/status` | Durum güncelle |
 | GET | `/api/neighborhoods` | Mahalle poligonları + açık/toplam talep sayısı |
+
 ## ⚙️ Teknik Detaylar ve Mimari
 
 - **Mekansal Veri Modeli:** Coğrafi veriler `geometry(Point,4326)` ve `geometry(Polygon,4326)` tiplerinde saklanmış, performanslı mekansal aramalar için GIST indeksleri tanımlanmıştır. Veritabanı ile ORM arasındaki mekansal iletişim NetTopologySuite (EF Core) üzerinden sağlanmıştır.
 - **Mekansal Sorgular:** Sistemde point-in-polygon (`Boundary.Contains`) ile noktanın bulunduğu poligon tespiti, Bounding Box (`Within`) ile harita görünümüne göre veri filtreleme ve mahalle bazlı mekansal toplulaştırma (aggregation) işlemleri aktif olarak kullanılmaktadır.
 - **Hassas Mesafe Ölçümü:** `geometry` tipinde (SRID 4326) mesafeler derece cinsinden hesaplandığı için, metre bazlı kesin sonuçlar elde etmek amacıyla `ST_DWithin` sorgularında veri `geography` tipine cast edilerek kullanılmıştır.
 - **REST API ve GeoJSON:** Uç noktalar endüstri standardı GeoJSON formatında (FeatureCollection) yanıt verir. Bu sayede Leaflet arayüzünün yanı sıra QGIS veya kurum içi farklı CBS yazılımlarıyla doğrudan entegre çalışabilir.
-- **Yapay Zeka ve Hata Toleransı:** Serbest metin formatındaki vatandaş talepleri Claude API ile analiz edilip ilgili kategoriye atanır. API anahtarının eksik olduğu veya servise ulaşılamayan durumlarda sistem hata fırlatmaz; kural tabanlı (rule-based) yedek bir sınıflandırıcı devreye girer (graceful degradation). AI tahminleri veritabanında `AiSuggested` bayrağı ile işaretlenir.
+- **Yapay Zeka ve Hata Toleransı:** Serbest metin formatındaki vatandaş talepleri Groq API üzerinden `openai/gpt-oss-20b` modeli ile analiz edilip ilgili kategoriye atanır (`temperature=0` ile deterministik çıktı). API anahtarının eksik olduğu veya servise ulaşılamayan durumlarda sistem hata fırlatmaz; kural tabanlı (rule-based) yedek bir sınıflandırıcı devreye girer (graceful degradation). AI tahminleri veritabanında `AiSuggested` bayrağı ile işaretlenir.
 - **Güvenlik:** Olası XSS açıklarına karşı arayüz katmanında kullanıcı girdileri HTML-escape işleminden geçirilir. Girdi doğrulamaları API seviyesinde ele alınmış olup, veri erişim katmanında SQL Injection riskini önlemek için parametreli sorgular (`FromSqlInterpolated`) kullanılmıştır.
-
 
 ## 📸 Ekran Görüntüleri
 
@@ -66,7 +72,7 @@ Vatandaşın konum seçerek serbest metinle talep oluşturduğu arayüz.
 <img src="assets/Talep%20Ekranı.png" width="800">
 
 **4. Talep Detay Görünümü**  
-Claude API tarafından kategorize edilmiş talebin detayları ve durum yönetimi.  
+Yapay zeka (Groq / gpt-oss-20b) tarafından kategorize edilmiş talebin detayları ve durum yönetimi.  
 <img src="assets/DetayGörünüm.png" width="800">
 
 ## 🚀 Gelecek Geliştirmeler (Roadmap)
@@ -78,4 +84,3 @@ Claude API tarafından kategorize edilmiş talebin detayları ve durum yönetimi
 - Yüksek hacimli mekansal verilerin performanslı renderlanabilmesi için Vector Tile (MVT) altyapısının kurulması ve GeoServer (WMS/WFS) entegrasyonu.
 - xUnit ile API ve mekansal sorgu testlerinin (Unit & Integration Tests) yazılması.
 - Uygulamanın .NET servisinin de tamamen Docker container ortamına taşınması.
-- 
