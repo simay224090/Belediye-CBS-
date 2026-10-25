@@ -49,9 +49,8 @@ dotnet user-secrets set "Groq:ApiKey" "..."
 | GET | `/api/neighborhoods` | Mahalle poligonları + açık/toplam talep sayısı |
 
 ## ⚙️ Teknik Detaylar ve Mimari
- ## ⚙️ Teknik Detaylar ve Katmanlı Mimari
 
-![Belediye CBS Sistem Mimarisi](assets/belediye_cbs_mimari_sade.png)
+![Belediye CBS Sistem Mimarisi](assets/mimari.png)
 
 Sistem; sunum, iş mantığı, mekânsal veri ve yapay zekâ bileşenlerinin birbirinden bağımsız ve hataya dayanıklı çalıştığı 4 temel katmandan oluşur:
 
