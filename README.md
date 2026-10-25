@@ -56,24 +56,24 @@ Sistem; sunum, iş mantığı, mekânsal veri ve yapay zekâ bileşenlerinin bir
 
 ### 1. Sunum & Etkileşim Katmanı (Leaflet + jQuery Ajax)
 * **Kullanıcı Deneyimi:** Razor Page üzerinde çalışan arayüz, vatandaşın haritadan nokta seçmesini ve serbest metinle talep iletmesini sağlar.
-* **Asenkron Mekânsal Çizim:** Arka uçtan dönen GeoJSON (`FeatureCollection`) katmanları tam sayfa yenilemesi olmadan Leaflet katmanlarına dinamik olarak bind edilir[cite: 1].
-* **Arayüz Güvenliği:** Olası XSS (Cross-Site Scripting) saldırılarını önlemek için kullanıcı girdileri harita balonlarında (popup) gösterilmeden önce HTML-escape işlemine tabi tutulur[cite: 1].
+* **Asenkron Mekânsal Çizim:** Arka uçtan dönen GeoJSON (`FeatureCollection`) katmanları tam sayfa yenilemesi olmadan Leaflet katmanlarına dinamik olarak bind edilir.
+* **Arayüz Güvenliği:** Olası XSS (Cross-Site Scripting) saldırılarını önlemek için kullanıcı girdileri harita balonlarında (popup) gösterilmeden önce HTML-escape işlemine tabi tutulur.
 
 ### 2. Uygulama & Servis Katmanı (ASP.NET Core .NET 10 & EF Core)
 * **REST API:** Minimal API mimarisiyle yapılandırılmış uç noktalar (`/requests`, `/nearby`, `/neighborhoods`) üzerinden girdi doğrulama ve DTO dönüşümleri yürütülür[cite: 1].
-* **Mekânsal ORM Çevrimi (NetTopologySuite):** EF Core ile PostgreSQL arasındaki mekânsal tercümandır[cite: 1]. C# geometrik tiplerini (`Point`, `Polygon`) PostGIS formatına dönüştürür[cite: 1].
-* **Mekânsal Filtreleme:** Harita sınırlarına göre Bounding Box (`Within`) sorgulamaları ve point-in-polygon (`Boundary.Contains`) mantığı bu katmanda çalışır[cite: 1].
+* **Mekânsal ORM Çevrimi (NetTopologySuite):** EF Core ile PostgreSQL arasındaki mekânsal tercümandır. C# geometrik tiplerini (`Point`, `Polygon`) PostGIS formatına dönüştürür.
+* **Mekânsal Filtreleme:** Harita sınırlarına göre Bounding Box (`Within`) sorgulamaları ve point-in-polygon (`Boundary.Contains`) mantığı bu katmanda çalışır.
 * **Veri Güvenliği:** SQL Injection riskine karşı veri erişiminde parametreli sorgular (`FromSqlInterpolated`) kullanılır.
 
 ### 3. CBS Veri Katmanı (PostgreSQL + PostGIS - Docker)
-* **Mekânsal Veri Tipleri:** Talepler `geometry(Point,4326)`, mahalle sınırları ise `geometry(Polygon,4326)` tiplerinde saklanır[cite: 1].
-* **GIST İndeksleri:** Mekânsal aramaların milisaniyeler seviyesinde tamamlanabilmesi için ilgili geometrik kolonlarda GIST indeksleme aktif olarak kullanılır[cite: 1].
+* **Mekânsal Veri Tipleri:** Talepler `geometry(Point,4326)`, mahalle sınırları ise `geometry(Polygon,4326)` tiplerinde saklanır.
+* **GIST İndeksleri:** Mekânsal aramaların milisaniyeler seviyesinde tamamlanabilmesi için ilgili geometrik kolonlarda GIST indeksleme aktif olarak kullanılır.
 * **Hassas Mesafe Hesabı:** SRID 4326 düzleminde mesafeler derece cinsinden olduğu için, metre bazlı kesin sonuçlar elde etmek amacıyla `ST_DWithin` sorgularında veri `geography` tipine dönüştürülür (cast edilir).
 
 ### 4. Yapay Zekâ & Hata Toleransı Hattı (Groq API & Fallback)
-* **Yüksek Hızlı LLM Çıkarımı:** Serbest metinler **Groq LPU** altyapısındaki `openai/gpt-oss-20b` modeline (`temperature=0`, JSON Object) iletilerek ~300 ms gibi sub-second sürelerde analiz edilir ve otomatik kategoriye atanır[cite: 1].
-* **Zarif Gerileme (Graceful Degradation):** API anahtarının eksik olduğu, kota aşımı yaşandığı veya harici servise erişilemediği anlarda sistem hata fırlatmaz; kural tabanlı (rule-based) yedek algoritma devreye girerek akışın kesilmesini önler[cite: 1].
-* **Denetlenebilirlik (Auditability):** Model tarafından otomatik sınıflandırılan talepler veritabanında `AiSuggested = true` bayrağı ile işaretlenir[cite: 1].
+* **Yüksek Hızlı LLM Çıkarımı:** Serbest metinler **Groq LPU** altyapısındaki `openai/gpt-oss-20b` modeline (`temperature=0`, JSON Object) iletilerek ~300 ms gibi sub-second sürelerde analiz edilir ve otomatik kategoriye atanır.
+* **Zarif Gerileme (Graceful Degradation):** API anahtarının eksik olduğu, kota aşımı yaşandığı veya harici servise erişilemediği anlarda sistem hata fırlatmaz; kural tabanlı (rule-based) yedek algoritma devreye girerek akışın kesilmesini önler.
+* **Denetlenebilirlik (Auditability):** Model tarafından otomatik sınıflandırılan talepler veritabanında `AiSuggested = true` bayrağı ile işaretlenir.
 ## 📸 Ekran Görüntüleri
 
 **1. Genel Harita Görünümü**  
